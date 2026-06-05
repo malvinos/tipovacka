@@ -24,6 +24,19 @@ export default function NewPoolPage() {
         </label>
 
         <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">
+            Obrázek (URL){" "}
+            <span className="text-muted">(nepovinné)</span>
+          </span>
+          <input
+            name="image_url"
+            type="url"
+            className="input"
+            placeholder="https://…/obrazek.jpg"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">Pravidla tipování</span>
           <textarea
             name="rules"

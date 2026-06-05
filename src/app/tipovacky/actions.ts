@@ -21,24 +21,20 @@ async function requireUser() {
 // Připojení do tipovačky
 // ---------------------------------------------------------------------------
 
+/** Připojení k VEŘEJNÉ tipovačce jedním klikem. Soukromé jdou jen přes kód. */
 export async function joinPool(formData: FormData) {
   const { supabase, user } = await requireUser();
   const poolId = str(formData.get("pool_id"));
-  const code = str(formData.get("join_code"));
 
   const { data: pool, error } = await supabase
     .from("pools")
-    .select("id, is_public, join_code")
+    .select("id, is_public")
     .eq("id", poolId)
     .single();
 
   if (error || !pool) throw new Error("Tipovačka nenalezena.");
-
-  // U soukromé tipovačky musí sedět kód.
   if (!pool.is_public) {
-    if (!code || code !== pool.join_code) {
-      throw new Error("Neplatný přístupový kód.");
-    }
+    throw new Error("Tato tipovačka vyžaduje přístupový kód.");
   }
 
   const { error: joinErr } = await supabase
@@ -53,15 +49,47 @@ export async function joinPool(formData: FormData) {
   revalidatePath(`/tipovacky/${poolId}`);
 }
 
+/**
+ * Připojení přes kód – nevyžaduje, aby uživatel tipovačku napřed viděl.
+ * Použije DB funkci join_pool_by_code (obchází RLS jen pro vyhledání podle kódu).
+ */
+export async function joinByCode(formData: FormData) {
+  const { supabase } = await requireUser();
+  const code = str(formData.get("join_code"));
+  // Kam se vrátit při chybě (stránka tipovačky, ze které se odesílalo).
+  const back = str(formData.get("pool_id"));
+  const errTo = (msg: string) =>
+    back
+      ? `/tipovacky/${back}?join_error=${encodeURIComponent(msg)}`
+      : `/?join_error=${encodeURIComponent(msg)}`;
+
+  if (!code) redirect(errTo("Zadej přístupový kód."));
+
+  const { data: poolId, error } = await supabase.rpc("join_pool_by_code", {
+    p_code: code,
+  });
+
+  if (error) redirect(errTo(error.message));
+  if (!poolId) redirect(errTo("Neplatný přístupový kód."));
+
+  redirect(`/tipovacky/${poolId}`);
+}
+
 // ---------------------------------------------------------------------------
 // Uložení tipu
 // ---------------------------------------------------------------------------
 
-export async function savePrediction(formData: FormData) {
+/**
+ * Uloží (vytvoří/přepíše) tip uživatele. Volá se z klienta při automatickém
+ * ukládání, proto vrací výsledek místo vyhození chyby a nedělá revalidaci
+ * (aby se uživateli nepřekreslila stránka uprostřed vyplňování).
+ */
+export async function savePredictionValue(input: {
+  marketId: string;
+  value: Record<string, unknown>;
+}): Promise<{ ok: boolean; error?: string }> {
   const { supabase, user } = await requireUser();
-  const marketId = str(formData.get("market_id"));
-  const poolId = str(formData.get("pool_id"));
-  const type = str(formData.get("type"));
+  const { marketId, value } = input;
 
   // Ověř, že zápas ještě nezačal / není po uzávěrce.
   const { data: market } = await supabase
@@ -75,33 +103,14 @@ export async function savePrediction(formData: FormData) {
     predict_deadline: string | null;
   } | null;
 
-  if (!match) throw new Error("Tip nelze uložit.");
+  if (!match) return { ok: false, error: "Tip nelze uložit." };
 
   const deadlinePassed = match.predict_deadline
     ? new Date(match.predict_deadline).getTime() < Date.now()
     : false;
 
   if (match.status !== "scheduled" || deadlinePassed) {
-    throw new Error("Tipování je už uzavřené.");
-  }
-
-  // Sestav hodnotu tipu podle typu otázky.
-  let value: Record<string, unknown>;
-  switch (type) {
-    case "EXACT_SCORE":
-      value = {
-        home: Number(str(formData.get("home"))),
-        away: Number(str(formData.get("away"))),
-      };
-      break;
-    case "OUTCOME_1X2":
-      value = { outcome: str(formData.get("outcome")) };
-      break;
-    case "FIRST_SCORER":
-      value = { player: str(formData.get("player")) };
-      break;
-    default:
-      throw new Error("Neznámý typ tipu.");
+    return { ok: false, error: "Tipování je už uzavřené." };
   }
 
   const { error } = await supabase.from("predictions").upsert(
@@ -114,7 +123,7 @@ export async function savePrediction(formData: FormData) {
     { onConflict: "market_id,user_id" },
   );
 
-  if (error) throw new Error(error.message);
+  if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/tipovacky/${poolId}`);
+  return { ok: true };
 }

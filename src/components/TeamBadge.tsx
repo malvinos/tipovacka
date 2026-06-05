@@ -1,6 +1,8 @@
+import { countryCode } from "@/lib/countries";
+
 /**
- * Ikona týmu – kolečko s iniciálami a barvou odvozenou z názvu.
- * Stejný tým má vždy stejnou barvu (deterministicky z hashe názvu).
+ * Ikona týmu. U rozpoznané země zobrazí kruhovou vlajku, jinak kolečko
+ * s iniciálami a barvou odvozenou z názvu.
  */
 export function TeamBadge({
   name,
@@ -9,6 +11,23 @@ export function TeamBadge({
   name: string;
   size?: number;
 }) {
+  const code = countryCode(name);
+
+  if (code) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`https://cdn.jsdelivr.net/gh/HatScripts/circle-flags/flags/${code}.svg`}
+        alt={name}
+        title={name}
+        width={size}
+        height={size}
+        loading="lazy"
+        className="team-badge object-cover bg-surface"
+      />
+    );
+  }
+
   const initials = getInitials(name);
   const hue = hashHue(name);
 

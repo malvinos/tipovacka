@@ -1,0 +1,73 @@
+datum;čas;domácí;hosté;skupina
+2026-06-11;21:00;Mexiko;Jihoafrická republika;Skupina A
+2026-06-12;04:00;Jižní Korea;Česko;Skupina A
+2026-06-18;18:00;Česko;Jihoafrická republika;Skupina A
+2026-06-19;03:00;Mexiko;Jižní Korea;Skupina A
+2026-06-25;03:00;Česko;Mexiko;Skupina A
+2026-06-25;03:00;Jihoafrická republika;Jižní Korea;Skupina A
+2026-06-12;21:00;Kanada;Bosna a Hercegovina;Skupina B
+2026-06-13;21:00;Katar;Švýcarsko;Skupina B
+2026-06-18;21:00;Švýcarsko;Bosna a Hercegovina;Skupina B
+2026-06-19;00:00;Kanada;Katar;Skupina B
+2026-06-24;21:00;Švýcarsko;Kanada;Skupina B
+2026-06-24;21:00;Bosna a Hercegovina;Katar;Skupina B
+2026-06-14;00:00;Brazílie;Maroko;Skupina C
+2026-06-14;03:00;Haiti;Skotsko;Skupina C
+2026-06-20;00:00;Skotsko;Maroko;Skupina C
+2026-06-20;02:30;Brazílie;Haiti;Skupina C
+2026-06-25;00:00;Skotsko;Brazílie;Skupina C
+2026-06-25;00:00;Maroko;Haiti;Skupina C
+2026-06-13;03:00;USA;Paraguay;Skupina D
+2026-06-14;06:00;Austrálie;Turecko;Skupina D
+2026-06-19;21:00;USA;Austrálie;Skupina D
+2026-06-20;05:00;Turecko;Paraguay;Skupina D
+2026-06-26;04:00;Turecko;USA;Skupina D
+2026-06-26;04:00;Paraguay;Austrálie;Skupina D
+2026-06-14;19:00;Německo;Curaçao;Skupina E
+2026-06-15;01:00;Pobřeží slonoviny;Ekvádor;Skupina E
+2026-06-20;22:00;Německo;Pobřeží slonoviny;Skupina E
+2026-06-21;02:00;Ekvádor;Curaçao;Skupina E
+2026-06-25;22:00;Curaçao;Pobřeží slonoviny;Skupina E
+2026-06-25;22:00;Ekvádor;Německo;Skupina E
+2026-06-14;22:00;Nizozemsko;Japonsko;Skupina F
+2026-06-15;04:00;Švédsko;Tunisko;Skupina F
+2026-06-20;19:00;Nizozemsko;Švédsko;Skupina F
+2026-06-21;06:00;Tunisko;Japonsko;Skupina F
+2026-06-26;01:00;Japonsko;Švédsko;Skupina F
+2026-06-26;01:00;Tunisko;Nizozemsko;Skupina F
+2026-06-15;21:00;Belgie;Egypt;Skupina G
+2026-06-16;03:00;Írán;Nový Zéland;Skupina G
+2026-06-21;21:00;Belgie;Írán;Skupina G
+2026-06-22;03:00;Nový Zéland;Egypt;Skupina G
+2026-06-27;05:00;Egypt;Írán;Skupina G
+2026-06-27;05:00;Nový Zéland;Belgie;Skupina G
+2026-06-15;18:00;Španělsko;Kapverdy;Skupina H
+2026-06-16;00:00;Saúdská Arábie;Uruguay;Skupina H
+2026-06-21;18:00;Španělsko;Saúdská Arábie;Skupina H
+2026-06-22;00:00;Uruguay;Kapverdy;Skupina H
+2026-06-27;02:00;Kapverdy;Saúdská Arábie;Skupina H
+2026-06-27;02:00;Uruguay;Španělsko;Skupina H
+2026-06-16;21:00;Francie;Senegal;Skupina I
+2026-06-17;00:00;Irák;Norsko;Skupina I
+2026-06-22;23:00;Francie;Irák;Skupina I
+2026-06-23;02:00;Norsko;Senegal;Skupina I
+2026-06-26;21:00;Norsko;Francie;Skupina I
+2026-06-26;21:00;Senegal;Irák;Skupina I
+2026-06-17;03:00;Argentina;Alžírsko;Skupina J
+2026-06-17;06:00;Rakousko;Jordánsko;Skupina J
+2026-06-22;19:00;Argentina;Rakousko;Skupina J
+2026-06-23;05:00;Jordánsko;Alžírsko;Skupina J
+2026-06-28;04:00;Alžírsko;Rakousko;Skupina J
+2026-06-28;04:00;Jordánsko;Argentina;Skupina J
+2026-06-17;19:00;Portugalsko;DR Kongo;Skupina K
+2026-06-18;04:00;Uzbekistán;Kolumbie;Skupina K
+2026-06-23;19:00;Portugalsko;Uzbekistán;Skupina K
+2026-06-24;04:00;Kolumbie;DR Kongo;Skupina K
+2026-06-28;01:30;Kolumbie;Portugalsko;Skupina K
+2026-06-28;01:30;DR Kongo;Uzbekistán;Skupina K
+2026-06-17;22:00;Anglie;Chorvatsko;Skupina L
+2026-06-18;01:00;Ghana;Panama;Skupina L
+2026-06-23;22:00;Anglie;Ghana;Skupina L
+2026-06-24;01:00;Panama;Chorvatsko;Skupina L
+2026-06-27;23:00;Panama;Anglie;Skupina L
+2026-06-27;23:00;Chorvatsko;Ghana;Skupina L

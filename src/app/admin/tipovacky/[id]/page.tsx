@@ -3,10 +3,14 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   createMatch,
+  deleteAllMatches,
   deleteMatch,
+  importMatches,
   saveResult,
   updatePool,
 } from "@/app/admin/actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { ImportArea } from "@/components/ImportArea";
 
 export const dynamic = "force-dynamic";
 
@@ -24,26 +28,39 @@ function formatDate(value: string | null) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Prague",
   });
 }
 
 export default async function ManagePoolPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    imported?: string;
+    skipped?: string;
+    import_error?: string;
+  }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const supabase = await createClient();
 
   const { data: pool } = await supabase
     .from("pools")
     .select(
-      "id, name, description, rules, is_public, join_code, status, default_markets",
+      "id, name, description, rules, is_public, status, image_url, default_markets",
     )
     .eq("id", id)
     .single();
 
   if (!pool) notFound();
+
+  // Přístupový kód je skrytý sloupec – admin ho čte přes funkci.
+  const { data: joinCode } = await supabase.rpc("get_join_code", {
+    p_pool: id,
+  });
 
   const { data: matches } = await supabase
     .from("matches")
@@ -71,6 +88,22 @@ export default async function ManagePoolPage({
         </div>
       </div>
 
+      {/* Hlášky o importu */}
+      {sp.imported && (
+        <div className="card p-4 text-sm badge-success border">
+          Naimportováno {sp.imported} zápasů
+          {sp.skipped && Number(sp.skipped) > 0
+            ? ` (přeskočeno ${sp.skipped} neplatných řádků)`
+            : ""}
+          .
+        </div>
+      )}
+      {sp.import_error && (
+        <div className="card p-4 text-sm badge-warning border">
+          Import se nezdařil: {sp.import_error}
+        </div>
+      )}
+
       {/* Úprava tipovačky */}
       <section>
         <h3 className="font-semibold mb-4">Nastavení tipovačky</h3>
@@ -95,6 +128,27 @@ export default async function ManagePoolPage({
               className="input"
               defaultValue={pool.description ?? ""}
             />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">
+              Obrázek (URL) <span className="text-muted">(nepovinné)</span>
+            </span>
+            <input
+              name="image_url"
+              type="url"
+              className="input"
+              defaultValue={pool.image_url ?? ""}
+              placeholder="https://…/obrazek.jpg"
+            />
+            {pool.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pool.image_url}
+                alt=""
+                className="mt-2 h-28 w-full object-cover rounded-lg border"
+              />
+            )}
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -127,7 +181,7 @@ export default async function ManagePoolPage({
               <input
                 name="join_code"
                 className="input"
-                defaultValue={pool.join_code ?? ""}
+                defaultValue={joinCode ?? ""}
               />
             </label>
           </div>
@@ -222,9 +276,42 @@ export default async function ManagePoolPage({
         </form>
       </section>
 
+      {/* Hromadný import zápasů */}
+      <section>
+        <h3 className="font-semibold mb-4">Hromadný import zápasů</h3>
+        <form action={importMatches} className="card p-6 flex flex-col gap-4">
+          <input type="hidden" name="pool_id" value={pool.id} />
+          <p className="text-sm text-muted">
+            Nahraj <strong>CSV soubor</strong>, nebo vlož řádky ručně. Formát:{" "}
+            <code className="text-xs">datum;čas;domácí;hosté;skupina</code>. Čas
+            zadávej v pražském čase, skupina je nepovinná, hlavička se ignoruje.
+          </p>
+
+          <ImportArea />
+
+          <div className="flex justify-end">
+            <button type="submit" className="btn btn-primary">
+              Importovat zápasy
+            </button>
+          </div>
+        </form>
+      </section>
+
       {/* Seznam zápasů + výsledky */}
       <section>
-        <h3 className="font-semibold mb-4">Zápasy</h3>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h3 className="font-semibold">Zápasy ({matches?.length ?? 0})</h3>
+          {matches && matches.length > 0 && (
+            <form action={deleteAllMatches}>
+              <input type="hidden" name="pool_id" value={pool.id} />
+              <ConfirmButton
+                confirmText={`Opravdu smazat všech ${matches.length} zápasů včetně tipů? Tuto akci nelze vrátit.`}
+              >
+                Smazat všechny
+              </ConfirmButton>
+            </form>
+          )}
+        </div>
         <div className="flex flex-col gap-3">
           {(!matches || matches.length === 0) && (
             <div className="card p-6 text-sm text-muted">
@@ -284,9 +371,11 @@ export default async function ManagePoolPage({
                 <form action={deleteMatch}>
                   <input type="hidden" name="match_id" value={m.id} />
                   <input type="hidden" name="pool_id" value={pool.id} />
-                  <button type="submit" className="btn btn-outline">
+                  <ConfirmButton
+                    confirmText={`Smazat zápas ${m.home_team} vs ${m.away_team}?`}
+                  >
                     Smazat
-                  </button>
+                  </ConfirmButton>
                 </form>
               </div>
             </div>

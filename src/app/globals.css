@@ -161,6 +161,29 @@ body {
   border-left-color: var(--info);
 }
 
+/* Obdélníček s pořadím v žebříčku (mimo medailové pozice) */
+.rank-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.4rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* Karta soukromé tipovačky – barevné odlišení */
+.private-card {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+.private-card:hover {
+  border-color: var(--warning);
+}
+
 /* Zvýrazněná karta s pravidly */
 .rules-box {
   background: color-mix(in srgb, var(--primary) 7%, var(--surface));

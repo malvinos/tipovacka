@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { joinPool, savePrediction } from "@/app/tipovacky/actions";
+import { joinByCode, joinPool } from "@/app/tipovacky/actions";
 import { TeamBadge } from "@/components/TeamBadge";
+import { PredictionForm } from "@/components/PredictionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ function formatDate(value: string | null) {
     month: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Prague",
   });
 }
 
@@ -59,10 +61,13 @@ type StageGroupEntry =
 
 export default async function PoolMatchesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ join_error?: string }>;
 }) {
   const { id } = await params;
+  const { join_error } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -127,24 +132,42 @@ export default async function PoolMatchesPage({
         </div>
       )}
 
-      {user && !isMember && (
-        <div className="card p-5 mb-8">
-          <p className="font-medium mb-3">Připoj se a začni tipovat</p>
-          <form
-            action={joinPool}
-            className="flex flex-col sm:flex-row gap-3 sm:items-end"
-          >
+      {user && !isMember && pool.is_public && (
+        <div className="card p-5 mb-8 flex items-center justify-between gap-3">
+          <p className="font-medium">Připoj se a začni tipovat</p>
+          <form action={joinPool}>
             <input type="hidden" name="pool_id" value={pool.id} />
-            {!pool.is_public && (
-              <label className="flex flex-col gap-1.5 flex-1">
-                <span className="text-sm text-muted">Přístupový kód</span>
-                <input name="join_code" required className="input" />
-              </label>
-            )}
             <button type="submit" className="btn btn-primary">
               Připojit se
             </button>
           </form>
+        </div>
+      )}
+
+      {user && !isMember && !pool.is_public && (
+        <div className="rules-box p-5 mb-8" style={{ borderLeftColor: "var(--warning)" }}>
+          <p className="font-medium mb-1 flex items-center gap-2">
+            Soukromá tipovačka
+          </p>
+          <p className="text-sm text-muted mb-3">
+            Zápasy a tipování se odemknou po zadání přístupového kódu.
+          </p>
+          <form
+            action={joinByCode}
+            className="flex flex-col sm:flex-row gap-3 sm:items-end"
+          >
+            <input type="hidden" name="pool_id" value={pool.id} />
+            <label className="flex flex-col gap-1.5 flex-1">
+              <span className="text-sm text-muted">Přístupový kód</span>
+              <input name="join_code" required className="input" />
+            </label>
+            <button type="submit" className="btn btn-primary">
+              Odemknout
+            </button>
+          </form>
+          {join_error && (
+            <p className="text-sm text-red-600 mt-3">{join_error}</p>
+          )}
         </div>
       )}
 
@@ -207,8 +230,10 @@ function withDaySeparators(matches: Match[]): StageGroupEntry[] {
 }
 
 function dayKey(value: string) {
-  const d = new Date(value);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  // Klíč dne podle pražského času (en-CA → "2026-06-11").
+  return new Date(value).toLocaleDateString("en-CA", {
+    timeZone: "Europe/Prague",
+  });
 }
 
 function formatDay(value: string) {
@@ -216,6 +241,7 @@ function formatDay(value: string) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "Europe/Prague",
   });
 }
 
@@ -224,6 +250,7 @@ function formatTime(value: string | null) {
   return new Date(value).toLocaleTimeString("cs-CZ", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Prague",
   });
 }
 
@@ -304,7 +331,6 @@ function MatchCard({
             <MarketRow
               key={market.id}
               market={market}
-              poolId={poolId}
               open={open}
               pred={predictionByMarket.get(market.id)}
             />
@@ -319,15 +345,13 @@ function MatchCard({
   );
 }
 
-/** Jedna tipovací otázka u zápasu – formulář nebo zamčený výsledek. */
+/** Jedna tipovací otázka u zápasu – formulář (auto-uložení) nebo zamčený výsledek. */
 function MarketRow({
   market,
-  poolId,
   open,
   pred,
 }: {
   market: Market;
-  poolId: string;
   open: boolean;
   pred?: { value: Record<string, unknown>; points_awarded: number | null };
 }) {
@@ -350,66 +374,12 @@ function MarketRow({
   }
 
   return (
-    <form
-      action={savePrediction}
-      className="rounded-lg border p-3 flex flex-wrap items-end gap-3"
-    >
-      <input type="hidden" name="market_id" value={market.id} />
-      <input type="hidden" name="pool_id" value={poolId} />
-      <input type="hidden" name="type" value={market.type} />
-
-      <div className="text-xs text-muted w-full">{label}</div>
-
-      {market.type === "EXACT_SCORE" && (
-        <div className="flex items-end gap-2">
-          <input
-            name="home"
-            type="number"
-            min={0}
-            required
-            defaultValue={numValue(pred?.value.home)}
-            className="input w-16"
-          />
-          <span className="pb-2">:</span>
-          <input
-            name="away"
-            type="number"
-            min={0}
-            required
-            defaultValue={numValue(pred?.value.away)}
-            className="input w-16"
-          />
-        </div>
-      )}
-
-      {market.type === "OUTCOME_1X2" && (
-        <select
-          name="outcome"
-          required
-          defaultValue={strValue(pred?.value.outcome)}
-          className="input w-48"
-        >
-          <option value="">Vyber…</option>
-          <option value="1">Výhra domácích</option>
-          <option value="X">Remíza</option>
-          <option value="2">Výhra hostů</option>
-        </select>
-      )}
-
-      {market.type === "FIRST_SCORER" && (
-        <input
-          name="player"
-          required
-          defaultValue={strValue(pred?.value.player)}
-          placeholder="Jméno hráče"
-          className="input w-48"
-        />
-      )}
-
-      <button type="submit" className="btn btn-primary">
-        {pred ? "Změnit tip" : "Tipnout"}
-      </button>
-    </form>
+    <PredictionForm
+      marketId={market.id}
+      type={market.type}
+      label={label}
+      initial={pred?.value}
+    />
   );
 }
 
@@ -509,12 +479,4 @@ function describeValue(type: string, value: Record<string, unknown>) {
     default:
       return "—";
   }
-}
-
-function numValue(v: unknown): string | undefined {
-  return typeof v === "number" ? String(v) : undefined;
-}
-
-function strValue(v: unknown): string | undefined {
-  return typeof v === "string" ? v : undefined;
 }

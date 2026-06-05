@@ -31,7 +31,9 @@ export default async function PoolLayout({
 
       <div className="flex items-start justify-between gap-3 mt-3 mb-2">
         <h1 className="text-3xl font-bold">{pool.name}</h1>
-        <span className="badge">{pool.is_public ? "Veřejná" : "Soukromá"}</span>
+        <span className={`badge shrink-0 ${pool.is_public ? "" : "badge-warning"}`}>
+          {pool.is_public ? "Veřejná" : "🔒 Soukromá"}
+        </span>
       </div>
       {pool.description && (
         <p className="text-muted mb-6">{pool.description}</p>

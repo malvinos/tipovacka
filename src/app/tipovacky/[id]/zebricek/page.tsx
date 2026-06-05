@@ -24,19 +24,26 @@ export default async function PoolStandingsPage({
     );
   }
 
+  const MEDALS = ["🥇", "🥈", "🥉"];
+
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-[3rem_1fr_auto] gap-3 px-4 py-3 border-b text-xs text-muted font-medium">
-        <span className="text-right">#</span>
+      <div className="grid grid-cols-[4.5rem_1fr_auto] gap-3 px-4 py-3 border-b text-xs text-muted font-medium">
+        <span>Pořadí</span>
         <span>Hráč</span>
         <span className="text-right">Body</span>
       </div>
       {standings.map((row, i) => (
         <div
           key={row.user_id}
-          className="grid grid-cols-[3rem_1fr_auto] gap-3 items-center px-4 py-3 border-b last:border-b-0"
+          className="grid grid-cols-[4.5rem_1fr_auto] gap-3 items-center px-4 py-3 border-b last:border-b-0"
         >
-          <span className="text-right text-muted">{i + 1}.</span>
+          <span className="flex items-center gap-1">
+            {i < 3 && (
+              <span className="text-xl leading-none">{MEDALS[i]}</span>
+            )}
+            <span className="rank-box">{i + 1}</span>
+          </span>
           <span className="font-medium">{row.display_name ?? "Hráč"}</span>
           <span className="text-right font-semibold">
             {row.total_points} b.
