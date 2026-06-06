@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { HomeTabs, type CardPool, type Group } from "@/components/HomeTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +10,22 @@ type Pool = {
   is_public: boolean;
   status: string;
   image_url: string | null;
+  event_start: string | null;
+  event_end: string | null;
 };
 
-function membersLabel(n: number): string {
-  if (n === 1) return "1 člen";
-  if (n >= 2 && n <= 4) return `${n} členové`;
-  return `${n} členů`;
+function formatDateOnly(s: string): string {
+  const [y, m, d] = s.split("-");
+  return `${Number(d)}. ${Number(m)}. ${y}`;
+}
+
+function formatTs(ts: number): string {
+  return new Date(ts).toLocaleDateString("cs-CZ", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    timeZone: "Europe/Prague",
+  });
 }
 
 export default async function HomePage() {
@@ -23,9 +33,12 @@ export default async function HomePage() {
 
   const { data: pools, error } = await supabase
     .from("pools")
-    .select("id, name, description, is_public, status, image_url")
-    .eq("status", "active")
+    .select(
+      "id, name, description, is_public, status, image_url, event_start, event_end",
+    )
     .order("created_at", { ascending: false });
+
+  const list = (pools as Pool[] | null) ?? [];
 
   // Počty členů (i u soukromých) z veřejného pohledu.
   const { data: counts } = await supabase
@@ -35,10 +48,78 @@ export default async function HomePage() {
     (counts ?? []).map((c) => [c.pool_id, c.members]),
   );
 
+  // Termíny zápasů + které tipovačky už začaly.
+  const startedPools = new Set<string>();
+  const ranges = new Map<string, { min: number; max: number }>();
+  if (list.length > 0) {
+    const { data: matchRows } = await supabase
+      .from("matches")
+      .select("pool_id, starts_at")
+      .in(
+        "pool_id",
+        list.map((p) => p.id),
+      );
+    const now = Date.now();
+    for (const m of matchRows ?? []) {
+      if (!m.starts_at) continue;
+      const t = new Date(m.starts_at).getTime();
+      if (t <= now) startedPools.add(m.pool_id);
+      const cur = ranges.get(m.pool_id);
+      if (!cur) ranges.set(m.pool_id, { min: t, max: t });
+      else
+        ranges.set(m.pool_id, {
+          min: Math.min(cur.min, t),
+          max: Math.max(cur.max, t),
+        });
+    }
+  }
+
+  // Termín: přednostně ruční (event_start/end), jinak odvozený ze zápasů.
+  function dateFor(pool: Pool): string | null {
+    if (pool.event_start) {
+      const start = formatDateOnly(pool.event_start);
+      const end =
+        pool.event_end && pool.event_end !== pool.event_start
+          ? formatDateOnly(pool.event_end)
+          : null;
+      return end ? `${start} – ${end}` : start;
+    }
+    const r = ranges.get(pool.id);
+    if (r) return r.min === r.max ? formatTs(r.min) : `${formatTs(r.min)} – ${formatTs(r.max)}`;
+    return null;
+  }
+
+  function toCard(pool: Pool): CardPool {
+    return {
+      id: pool.id,
+      name: pool.name,
+      description: pool.description,
+      is_public: pool.is_public,
+      image_url: pool.image_url,
+      members: memberCount.get(pool.id) ?? 0,
+      date: dateFor(pool),
+    };
+  }
+
+  const ongoing: CardPool[] = [];
+  const upcoming: CardPool[] = [];
+  const finished: CardPool[] = [];
+  for (const pool of list) {
+    if (pool.status === "finished") finished.push(toCard(pool));
+    else if (startedPools.has(pool.id)) ongoing.push(toCard(pool));
+    else upcoming.push(toCard(pool));
+  }
+
+  const groups: Group[] = [
+    { key: "ongoing", title: "Probíhající", pools: ongoing },
+    { key: "upcoming", title: "Nadcházející", pools: upcoming },
+    { key: "finished", title: "Ukončené", pools: finished },
+  ];
+
   return (
     <div>
       <section className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Aktivní tipovačky</h1>
+        <h1 className="text-3xl font-bold mb-2">Tipovačky</h1>
         <p className="text-muted">
           Vyber si tipovačku, tipuj výsledky zápasů a vyšplhej v žebříčku.
         </p>
@@ -51,108 +132,13 @@ export default async function HomePage() {
         </div>
       )}
 
-      {!error && (!pools || pools.length === 0) && (
+      {!error && list.length === 0 ? (
         <div className="card p-10 text-center text-muted">
-          Zatím tu nejsou žádné aktivní tipovačky.
+          Zatím tu nejsou žádné tipovačky.
         </div>
+      ) : (
+        <HomeTabs groups={groups} />
       )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(pools as Pool[] | null)?.map((pool, i) => {
-          const members = memberCount.get(pool.id) ?? 0;
-          return (
-            <Link
-              key={pool.id}
-              href={`/tipovacky/${pool.id}`}
-              className={`card overflow-hidden hover:-translate-y-0.5 transition-all fade-in ${
-                pool.is_public ? "hover:border-primary" : "private-card"
-              }`}
-              style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
-            >
-              {/* Obrázek nebo barevný placeholder */}
-              <div className="relative">
-                {pool.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={pool.image_url}
-                    alt=""
-                    className="h-36 w-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="h-36 w-full flex items-center justify-center text-3xl font-bold text-white"
-                    style={{
-                      background: pool.is_public
-                        ? "linear-gradient(135deg, var(--primary), #8b5cf6)"
-                        : "linear-gradient(135deg, var(--warning), #b45309)",
-                    }}
-                  >
-                    {pool.name.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                {!pool.is_public && (
-                  <span className="absolute top-3 right-3 badge badge-warning bg-surface">
-                    <LockIcon /> Soukromá
-                  </span>
-                )}
-              </div>
-
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h2 className="font-semibold text-lg">{pool.name}</h2>
-                  {pool.is_public && <span className="badge shrink-0">Veřejná</span>}
-                </div>
-                {pool.description && (
-                  <p className="text-sm text-muted line-clamp-2 mb-3">
-                    {pool.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-1.5 text-sm text-muted">
-                  <UsersIcon />
-                  {membersLabel(members)}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
     </div>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
   );
 }

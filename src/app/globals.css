@@ -90,6 +90,15 @@ body {
   border-color: var(--primary);
 }
 
+/* Lehké tlačítko bez rámečku (pro hlavičku apod.) */
+.btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
 .input {
   width: 100%;
   background: var(--surface);

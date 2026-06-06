@@ -35,7 +35,8 @@ function parseMarkets(raw: string) {
 export async function createPool(formData: FormData) {
   const { supabase, user } = await requireAdmin();
 
-  const isPublic = formData.get("is_public") === "on";
+  // Soukromá = vyžaduje kód; jinak veřejná.
+  const isPrivate = formData.get("private") === "on";
 
   const { data, error } = await supabase
     .from("pools")
@@ -43,10 +44,12 @@ export async function createPool(formData: FormData) {
       name: str(formData.get("name")),
       description: str(formData.get("description")) || null,
       rules: str(formData.get("rules")) || null,
-      is_public: isPublic,
-      join_code: isPublic ? null : str(formData.get("join_code")) || null,
+      is_public: !isPrivate,
+      join_code: isPrivate ? str(formData.get("join_code")) || null : null,
       status: str(formData.get("status")) || "active",
       image_url: str(formData.get("image_url")) || null,
+      event_start: str(formData.get("event_start")) || null,
+      event_end: str(formData.get("event_end")) || null,
       default_markets: DEFAULT_MARKETS,
       created_by: user.id,
     })
@@ -63,7 +66,7 @@ export async function createPool(formData: FormData) {
 export async function updatePool(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = str(formData.get("id"));
-  const isPublic = formData.get("is_public") === "on";
+  const isPrivate = formData.get("private") === "on";
 
   const { error } = await supabase
     .from("pools")
@@ -71,10 +74,12 @@ export async function updatePool(formData: FormData) {
       name: str(formData.get("name")),
       description: str(formData.get("description")) || null,
       rules: str(formData.get("rules")) || null,
-      is_public: isPublic,
-      join_code: isPublic ? null : str(formData.get("join_code")) || null,
+      is_public: !isPrivate,
+      join_code: isPrivate ? str(formData.get("join_code")) || null : null,
       status: str(formData.get("status")) || "active",
       image_url: str(formData.get("image_url")) || null,
+      event_start: str(formData.get("event_start")) || null,
+      event_end: str(formData.get("event_end")) || null,
       default_markets: parseMarkets(str(formData.get("default_markets"))),
     })
     .eq("id", id);

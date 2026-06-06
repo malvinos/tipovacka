@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { joinByCode, joinPool } from "@/app/tipovacky/actions";
+import { joinByCode, joinPool, leavePool } from "@/app/tipovacky/actions";
 import { TeamBadge } from "@/components/TeamBadge";
 import { PredictionForm } from "@/components/PredictionForm";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -76,11 +77,12 @@ export default async function PoolMatchesPage({
 
   const { data: pool } = await supabase
     .from("pools")
-    .select("id, is_public, rules")
+    .select("id, is_public, status, rules")
     .eq("id", id)
     .single();
 
   if (!pool) return null;
+  const finished = pool.status === "finished";
 
   // Členství
   let isMember = false;
@@ -132,7 +134,15 @@ export default async function PoolMatchesPage({
         </div>
       )}
 
-      {user && !isMember && pool.is_public && (
+      {/* Ukončená tipovačka – jen k nahlédnutí */}
+      {finished && !isMember && (
+        <div className="card p-5 mb-8 text-sm text-muted">
+          Tipovačka je ukončená. Můžeš si prohlédnout výsledky a žebříček,
+          připojit se ale už nelze.
+        </div>
+      )}
+
+      {!finished && user && !isMember && pool.is_public && (
         <div className="card p-5 mb-8 flex items-center justify-between gap-3">
           <p className="font-medium">Připoj se a začni tipovat</p>
           <form action={joinPool}>
@@ -144,7 +154,7 @@ export default async function PoolMatchesPage({
         </div>
       )}
 
-      {user && !isMember && !pool.is_public && (
+      {!finished && user && !isMember && !pool.is_public && (
         <div className="rules-box p-5 mb-8" style={{ borderLeftColor: "var(--warning)" }}>
           <p className="font-medium mb-1 flex items-center gap-2">
             Soukromá tipovačka
@@ -168,6 +178,21 @@ export default async function PoolMatchesPage({
           {join_error && (
             <p className="text-sm text-red-600 mt-3">{join_error}</p>
           )}
+        </div>
+      )}
+
+      {/* Člen – možnost odejít */}
+      {isMember && (
+        <div className="flex justify-end mb-6">
+          <form action={leavePool}>
+            <input type="hidden" name="pool_id" value={pool.id} />
+            <ConfirmButton
+              confirmText="Opravdu chceš odejít z tipovačky? Tvé tipy zůstanou uložené, ale přestaneš být členem."
+              className="btn btn-ghost text-muted text-sm"
+            >
+              Odejít z tipovačky
+            </ConfirmButton>
+          </form>
         </div>
       )}
 

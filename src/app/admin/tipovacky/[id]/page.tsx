@@ -11,6 +11,7 @@ import {
 } from "@/app/admin/actions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ImportArea } from "@/components/ImportArea";
+import { PrivacyFields } from "@/components/PrivacyFields";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function ManagePoolPage({
   const { data: pool } = await supabase
     .from("pools")
     .select(
-      "id, name, description, rules, is_public, status, image_url, default_markets",
+      "id, name, description, rules, is_public, status, image_url, event_start, event_end, default_markets",
     )
     .eq("id", id)
     .single();
@@ -146,7 +147,7 @@ export default async function ManagePoolPage({
               <img
                 src={pool.image_url}
                 alt=""
-                className="mt-2 h-28 w-full object-cover rounded-lg border"
+                className="mt-2 h-40 w-full object-contain rounded-lg border bg-background"
               />
             )}
           </label>
@@ -161,7 +162,7 @@ export default async function ManagePoolPage({
             />
           </label>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Stav</span>
               <select
@@ -173,27 +174,30 @@ export default async function ManagePoolPage({
                 <option value="finished">Ukončená</option>
               </select>
             </label>
-
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">
-                Přístupový kód (soukromá)
-              </span>
+              <span className="text-sm font-medium">Termín od</span>
               <input
-                name="join_code"
+                name="event_start"
+                type="date"
                 className="input"
-                defaultValue={joinCode ?? ""}
+                defaultValue={pool.event_start ?? ""}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">Termín do</span>
+              <input
+                name="event_end"
+                type="date"
+                className="input"
+                defaultValue={pool.event_end ?? ""}
               />
             </label>
           </div>
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="is_public"
-              defaultChecked={pool.is_public}
-            />
-            <span className="text-sm">Veřejná (vidí ji každý)</span>
-          </label>
+          <PrivacyFields
+            defaultPrivate={!pool.is_public}
+            defaultCode={joinCode ?? ""}
+          />
 
           <details className="text-sm">
             <summary className="cursor-pointer text-muted">

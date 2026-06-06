@@ -30,24 +30,29 @@ export async function Header() {
           Tipovačka
         </Link>
 
-        <nav className="flex items-center gap-2 text-sm">
+        <nav className="flex items-center gap-1 text-sm">
           <ThemeToggle />
           {user ? (
             <>
               {isAdmin && (
-                <Link href="/admin" className="btn btn-outline">
+                <Link href="/admin" className="btn btn-ghost">
                   Admin
                 </Link>
               )}
               <Link
                 href="/profil"
-                className="hidden sm:inline text-muted hover:text-foreground px-2"
+                className="btn btn-ghost hidden sm:inline-flex font-medium"
               >
                 {displayName}
               </Link>
               <form action="/odhlaseni" method="post">
-                <button type="submit" className="btn btn-outline">
-                  Odhlásit
+                <button
+                  type="submit"
+                  className="btn btn-ghost text-muted"
+                  title="Odhlásit se"
+                  aria-label="Odhlásit se"
+                >
+                  <LogoutIcon />
                 </button>
               </form>
             </>
@@ -59,5 +64,23 @@ export async function Header() {
         </nav>
       </div>
     </header>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="M16 17l5-5-5-5M21 12H9" />
+    </svg>
   );
 }

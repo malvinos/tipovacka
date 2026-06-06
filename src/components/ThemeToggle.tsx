@@ -24,7 +24,7 @@ export function ThemeToggle() {
             : "Přepnout na tmavý režim"
       }
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="btn btn-outline px-2.5"
+      className="btn btn-ghost px-2.5 text-muted"
     >
       {mounted ? (isDark ? <SunIcon /> : <MoonIcon />) : <span className="w-5 h-5 block" />}
     </button>

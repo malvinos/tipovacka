@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createPool } from "@/app/admin/actions";
+import { PrivacyFields } from "@/components/PrivacyFields";
 
 export default function NewPoolPage() {
   return (
@@ -46,17 +47,22 @@ export default function NewPoolPage() {
           />
         </label>
 
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="is_public" defaultChecked />
-          <span className="text-sm">Veřejná (vidí ji každý)</span>
-        </label>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">
+              Termín od <span className="text-muted">(nepovinné)</span>
+            </span>
+            <input name="event_start" type="date" className="input" />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">
+              Termín do <span className="text-muted">(nepovinné)</span>
+            </span>
+            <input name="event_end" type="date" className="input" />
+          </label>
+        </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">
-            Přístupový kód <span className="text-muted">(jen pro soukromou)</span>
-          </span>
-          <input name="join_code" className="input" placeholder="Např. TAJNY-KOD-123" />
-        </label>
+        <PrivacyFields />
 
         <div className="flex justify-end">
           <button type="submit" className="btn btn-primary">

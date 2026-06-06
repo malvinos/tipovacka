@@ -28,11 +28,14 @@ export async function joinPool(formData: FormData) {
 
   const { data: pool, error } = await supabase
     .from("pools")
-    .select("id, is_public")
+    .select("id, is_public, status")
     .eq("id", poolId)
     .single();
 
   if (error || !pool) throw new Error("Tipovačka nenalezena.");
+  if (pool.status === "finished") {
+    throw new Error("Tipovačka je ukončená.");
+  }
   if (!pool.is_public) {
     throw new Error("Tato tipovačka vyžaduje přístupový kód.");
   }
@@ -45,6 +48,22 @@ export async function joinPool(formData: FormData) {
   if (joinErr && joinErr.code !== "23505") {
     throw new Error(joinErr.message);
   }
+
+  revalidatePath(`/tipovacky/${poolId}`);
+}
+
+/** Opuštění tipovačky (odhlášení členství). */
+export async function leavePool(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const poolId = str(formData.get("pool_id"));
+
+  const { error } = await supabase
+    .from("pool_members")
+    .delete()
+    .eq("pool_id", poolId)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(error.message);
 
   revalidatePath(`/tipovacky/${poolId}`);
 }
