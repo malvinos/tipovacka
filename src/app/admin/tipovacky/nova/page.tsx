@@ -62,6 +62,32 @@ export default function NewPoolPage() {
           </label>
         </div>
 
+        <div className="rounded-lg border p-4 flex flex-col gap-3">
+          <p className="text-sm font-medium">Bodování zápasů</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm">Body za přesný výsledek</span>
+              <input
+                name="points_exact"
+                type="number"
+                min={0}
+                className="input"
+                defaultValue={3}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm">Body za správného vítěze / remízu</span>
+              <input
+                name="points_outcome"
+                type="number"
+                min={0}
+                className="input"
+                defaultValue={1}
+              />
+            </label>
+          </div>
+        </div>
+
         <PrivacyFields />
 
         <div className="flex justify-end">

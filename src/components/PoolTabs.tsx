@@ -3,28 +3,37 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function PoolTabs({ poolId }: { poolId: string }) {
+export function PoolTabs({
+  poolId,
+  specialEnabled = false,
+}: {
+  poolId: string;
+  specialEnabled?: boolean;
+}) {
   const pathname = usePathname();
   const base = `/tipovacky/${poolId}`;
 
   const tabs = [
     { href: base, label: "Zápasy" },
     { href: `${base}/tipy`, label: "Tipy ostatních" },
+    ...(specialEnabled
+      ? [{ href: `${base}/umisteni`, label: "Speciální tipy" }]
+      : []),
     { href: `${base}/zebricek`, label: "Žebříček" },
   ];
 
   return (
-    <nav className="flex gap-1 border-b mb-8 overflow-x-auto">
+    <nav className="inline-flex flex-wrap gap-1 p-1 rounded-xl border bg-background mb-8">
       {tabs.map((tab) => {
         const active = pathname === tab.href;
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               active
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted hover:text-foreground"
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-muted hover:text-foreground"
             }`}
           >
             {tab.label}

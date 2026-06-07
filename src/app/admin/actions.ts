@@ -18,14 +18,17 @@ function str(v: FormDataEntryValue | null): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function parseMarkets(raw: string) {
-  if (!raw) return DEFAULT_MARKETS;
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : DEFAULT_MARKETS;
-  } catch {
-    return DEFAULT_MARKETS;
-  }
+/** Sestaví šablonu otázek (bodování) z formuláře. */
+function buildMarkets(formData: FormData) {
+  const exact = Number(str(formData.get("points_exact"))) || 3;
+  const outcome = Number(str(formData.get("points_outcome"))) || 1;
+  return [
+    {
+      type: "EXACT_SCORE",
+      label: "Výsledek zápasu",
+      points_config: { exact, outcome },
+    },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +53,7 @@ export async function createPool(formData: FormData) {
       image_url: str(formData.get("image_url")) || null,
       event_start: str(formData.get("event_start")) || null,
       event_end: str(formData.get("event_end")) || null,
-      default_markets: DEFAULT_MARKETS,
+      default_markets: buildMarkets(formData),
       created_by: user.id,
     })
     .select("id")
@@ -68,6 +71,31 @@ export async function updatePool(formData: FormData) {
   const id = str(formData.get("id"));
   const isPrivate = formData.get("private") === "on";
 
+  // Nastavení tipu na umístění
+  const placementPoints = {
+    "1": Number(str(formData.get("placement_points_1"))) || 0,
+    "2": Number(str(formData.get("placement_points_2"))) || 0,
+    "3": Number(str(formData.get("placement_points_3"))) || 0,
+  };
+  const placementCorrect: Record<string, string> = {};
+  for (const pos of ["1", "2", "3"]) {
+    const t = str(formData.get(`placement_correct_${pos}`));
+    if (t) placementCorrect[pos] = t;
+  }
+
+  // Bonusové tipy (střelec / asistence)
+  const extras: Record<
+    string,
+    { enabled: boolean; points: number; correct: string }
+  > = {};
+  for (const kind of ["scorer", "assists"]) {
+    extras[kind] = {
+      enabled: formData.get(`${kind}_enabled`) === "on",
+      points: Number(str(formData.get(`${kind}_points`))) || 0,
+      correct: str(formData.get(`${kind}_correct`)),
+    };
+  }
+
   const { error } = await supabase
     .from("pools")
     .update({
@@ -80,11 +108,31 @@ export async function updatePool(formData: FormData) {
       image_url: str(formData.get("image_url")) || null,
       event_start: str(formData.get("event_start")) || null,
       event_end: str(formData.get("event_end")) || null,
-      default_markets: parseMarkets(str(formData.get("default_markets"))),
+      placement_enabled: formData.get("placement_enabled") === "on",
+      placement_points: placementPoints,
+      placement_correct: placementCorrect,
+      extras,
+      default_markets: buildMarkets(formData),
     })
     .eq("id", id);
 
   if (error) throw new Error(error.message);
+
+  // Promítni nové bodování i do už založených zápasů (otázky typu EXACT_SCORE).
+  const markets = buildMarkets(formData);
+  const exactConfig = markets[0].points_config;
+  const { data: poolMatches } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("pool_id", id);
+  const matchIds = (poolMatches ?? []).map((m) => m.id);
+  if (matchIds.length > 0) {
+    await supabase
+      .from("markets")
+      .update({ points_config: exactConfig })
+      .eq("type", "EXACT_SCORE")
+      .in("match_id", matchIds);
+  }
 
   revalidatePath("/admin");
   revalidatePath(`/admin/tipovacky/${id}`);
@@ -242,6 +290,67 @@ export async function saveResult(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Vyhodnocení tipu na umístění
+// ---------------------------------------------------------------------------
+
+export async function evaluatePlacement(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const poolId = str(formData.get("pool_id"));
+
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("placement_points, placement_correct, extras")
+    .eq("id", poolId)
+    .single();
+
+  const points = (pool?.placement_points ?? {}) as Record<string, number>;
+  const correct = (pool?.placement_correct ?? {}) as Record<string, string>;
+
+  const { data: preds } = await supabase
+    .from("placement_predictions")
+    .select("id, position, team")
+    .eq("pool_id", poolId);
+
+  for (const p of preds ?? []) {
+    const key = String(p.position);
+    const awarded =
+      correct[key] && p.team === correct[key] ? (points[key] ?? 0) : 0;
+    await supabase
+      .from("placement_predictions")
+      .update({ points_awarded: awarded })
+      .eq("id", p.id);
+  }
+
+  // Bonusové tipy (střelec / asistence) – porovnání bez ohledu na velikost/mezery.
+  const extras = (pool?.extras ?? {}) as Record<
+    string,
+    { points?: number; correct?: string }
+  >;
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  const { data: extraPreds } = await supabase
+    .from("extra_predictions")
+    .select("id, kind, answer")
+    .eq("pool_id", poolId);
+
+  for (const e of extraPreds ?? []) {
+    const cfg = extras[e.kind];
+    const awarded =
+      cfg?.correct && norm(e.answer) === norm(cfg.correct)
+        ? (cfg.points ?? 0)
+        : 0;
+    await supabase
+      .from("extra_predictions")
+      .update({ points_awarded: awarded })
+      .eq("id", e.id);
+  }
+
+  revalidatePath(`/admin/tipovacky/${poolId}`);
+  revalidatePath(`/tipovacky/${poolId}/umisteni`);
+  revalidatePath(`/tipovacky/${poolId}/zebricek`);
 }
 
 // ---------------------------------------------------------------------------

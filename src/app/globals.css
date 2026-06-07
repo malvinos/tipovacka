@@ -99,6 +99,17 @@ body {
   background: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
+/* Lehké nebezpečné tlačítko (odejít apod.) */
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.btn-danger-ghost:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-color: var(--danger);
+}
+
 .input {
   width: 100%;
   background: var(--surface);

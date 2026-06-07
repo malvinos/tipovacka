@@ -188,7 +188,7 @@ export default async function PoolMatchesPage({
             <input type="hidden" name="pool_id" value={pool.id} />
             <ConfirmButton
               confirmText="Opravdu chceš odejít z tipovačky? Tvé tipy zůstanou uložené, ale přestaneš být členem."
-              className="btn btn-ghost text-muted text-sm"
+              className="btn btn-danger-ghost text-sm"
             >
               Odejít z tipovačky
             </ConfirmButton>

@@ -5,6 +5,7 @@ import {
   createMatch,
   deleteAllMatches,
   deleteMatch,
+  evaluatePlacement,
   importMatches,
   saveResult,
   updatePool,
@@ -51,7 +52,7 @@ export default async function ManagePoolPage({
   const { data: pool } = await supabase
     .from("pools")
     .select(
-      "id, name, description, rules, is_public, status, image_url, event_start, event_end, default_markets",
+      "id, name, description, rules, is_public, status, image_url, event_start, event_end, placement_enabled, placement_points, placement_correct, extras, default_markets",
     )
     .eq("id", id)
     .single();
@@ -70,6 +71,37 @@ export default async function ManagePoolPage({
     )
     .eq("pool_id", id)
     .order("starts_at", { ascending: true });
+
+  // Týmy pro výběr správného pořadí (unikátní z zápasů).
+  const teams = [
+    ...new Set(
+      (matches ?? []).flatMap((m) => [m.home_team, m.away_team]),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "cs"));
+  const placementPoints = (pool.placement_points ?? {}) as Record<
+    string,
+    number
+  >;
+  const placementCorrect = (pool.placement_correct ?? {}) as Record<
+    string,
+    string
+  >;
+  const extras = (pool.extras ?? {}) as Record<
+    string,
+    { enabled?: boolean; points?: number; correct?: string }
+  >;
+  const EXTRA_DEFS = [
+    { kind: "scorer", label: "Nejlepší střelec turnaje" },
+    { kind: "assists", label: "Nejvíc asistencí" },
+  ];
+
+  // Aktuální bodování zápasů (z šablony otázek)
+  const dm = Array.isArray(pool.default_markets) ? pool.default_markets : [];
+  const exactMarket = dm.find(
+    (m: { type?: string }) => m.type === "EXACT_SCORE",
+  ) as { points_config?: { exact?: number; outcome?: number } } | undefined;
+  const pointsExact = exactMarket?.points_config?.exact ?? 3;
+  const pointsOutcome = exactMarket?.points_config?.outcome ?? 1;
 
   return (
     <div className="flex flex-col gap-10">
@@ -199,25 +231,122 @@ export default async function ManagePoolPage({
             defaultCode={joinCode ?? ""}
           />
 
-          <details className="text-sm">
-            <summary className="cursor-pointer text-muted">
-              Pokročilé: šablona tipovacích otázek (JSON)
-            </summary>
-            <textarea
-              name="default_markets"
-              rows={5}
-              className="input mt-2 font-mono text-xs"
-              defaultValue={JSON.stringify(
-                pool.default_markets ?? [],
-                null,
-                2,
-              )}
-            />
-            <p className="text-muted mt-1 text-xs">
-              Určuje, jaké otázky se vytvoří u každého nového zápasu. Výchozí:
-              přesný výsledek (3 body) / správný vítěz (1 bod).
+          {/* Tip na umístění */}
+          <div className="rounded-lg border p-4 flex flex-col gap-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="placement_enabled"
+                defaultChecked={pool.placement_enabled}
+              />
+              <span className="text-sm font-medium">
+                Povolit tip na umístění (konečné pořadí)
+              </span>
+            </label>
+            <p className="text-xs text-muted">
+              Hráči tipnou 1.–3. místo turnaje. Body a správné pořadí nastavíš
+              níže; po skončení turnaje klikni na „Vyhodnotit umístění".
             </p>
-          </details>
+            {[1, 2, 3].map((pos) => (
+              <div key={pos} className="grid grid-cols-[5rem_1fr_6rem] gap-2 items-end">
+                <span className="text-sm pb-2">{pos}. místo</span>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">Správný tým</span>
+                  <select
+                    name={`placement_correct_${pos}`}
+                    className="input"
+                    defaultValue={placementCorrect[String(pos)] ?? ""}
+                  >
+                    <option value="">— nezadáno —</option>
+                    {teams.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">Body</span>
+                  <input
+                    name={`placement_points_${pos}`}
+                    type="number"
+                    min={0}
+                    className="input"
+                    defaultValue={placementPoints[String(pos)] ?? ""}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          {/* Bonusové tipy: střelec / asistence */}
+          <div className="rounded-lg border p-4 flex flex-col gap-4">
+            <p className="text-sm font-medium">Bonusové tipy</p>
+            {EXTRA_DEFS.map((def) => {
+              const cfg = extras[def.kind] ?? {};
+              return (
+                <div key={def.kind} className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name={`${def.kind}_enabled`}
+                      defaultChecked={cfg.enabled ?? false}
+                    />
+                    <span className="text-sm">{def.label}</span>
+                  </label>
+                  <div className="grid grid-cols-[1fr_6rem] gap-2">
+                    <input
+                      name={`${def.kind}_correct`}
+                      className="input"
+                      placeholder="Správná odpověď (po skončení)"
+                      defaultValue={cfg.correct ?? ""}
+                    />
+                    <input
+                      name={`${def.kind}_points`}
+                      type="number"
+                      min={0}
+                      className="input"
+                      placeholder="Body"
+                      defaultValue={cfg.points ?? ""}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Bodování zápasů */}
+          <div className="rounded-lg border p-4 flex flex-col gap-3">
+            <p className="text-sm font-medium">Bodování zápasů</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm">Body za přesný výsledek</span>
+                <input
+                  name="points_exact"
+                  type="number"
+                  min={0}
+                  className="input"
+                  defaultValue={pointsExact}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm">
+                  Body za správného vítěze / remízu
+                </span>
+                <input
+                  name="points_outcome"
+                  type="number"
+                  min={0}
+                  className="input"
+                  defaultValue={pointsOutcome}
+                />
+              </label>
+            </div>
+            <p className="text-muted text-xs">
+              Platí pro nové i už založené zápasy. U dohraných zápasů přepočítej
+              body znovu uložením výsledku.
+            </p>
+          </div>
 
           <div className="flex justify-end">
             <button type="submit" className="btn btn-primary">
@@ -225,6 +354,17 @@ export default async function ManagePoolPage({
             </button>
           </div>
         </form>
+
+        {(pool.placement_enabled ||
+          extras.scorer?.enabled ||
+          extras.assists?.enabled) && (
+          <form action={evaluatePlacement} className="mt-3 flex justify-end">
+            <input type="hidden" name="pool_id" value={pool.id} />
+            <button type="submit" className="btn btn-outline">
+              Vyhodnotit speciální tipy
+            </button>
+          </form>
+        )}
       </section>
 
       {/* Přidání zápasu */}
