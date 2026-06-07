@@ -4,6 +4,7 @@ import { joinByCode, joinPool, leavePool } from "@/app/tipovacky/actions";
 import { TeamBadge } from "@/components/TeamBadge";
 import { PredictionForm } from "@/components/PredictionForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +21,6 @@ const OUTCOME_LABELS: Record<string, string> = {
   X: "Remíza",
   "2": "Výhra hostů",
 };
-
-function formatDate(value: string | null) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("cs-CZ", {
-    day: "numeric",
-    month: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Prague",
-  });
-}
 
 type Market = {
   id: string;
@@ -336,17 +326,14 @@ function MatchCard({
         />
       </div>
 
-      {/* Zvýrazněný čas startu + uzávěrka */}
+      {/* Čas startu + živý odpočet do uzávěrky */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="badge">
           <CalendarIcon />
           {formatTime(m.starts_at)}
         </span>
-        {m.predict_deadline && open && (
-          <span className="badge badge-warning">
-            <ClockIcon />
-            Uzávěrka {formatDate(m.predict_deadline)}
-          </span>
+        {open && (
+          <Countdown target={m.starts_at} label="Začíná za" />
         )}
       </div>
 
@@ -471,24 +458,6 @@ function CalendarIcon() {
     >
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
     </svg>
   );
 }

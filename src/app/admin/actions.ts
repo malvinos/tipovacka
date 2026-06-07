@@ -63,7 +63,9 @@ export async function createPool(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/");
-  redirect(`/admin/tipovacky/${data.id}`);
+  redirect(
+    `/admin/tipovacky/${data.id}?msg=${encodeURIComponent("Tipovačka vytvořena")}`,
+  );
 }
 
 export async function updatePool(formData: FormData) {
@@ -137,6 +139,22 @@ export async function updatePool(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath(`/admin/tipovacky/${id}`);
   revalidatePath(`/tipovacky/${id}`);
+  redirect(
+    `/admin/tipovacky/${id}?msg=${encodeURIComponent("Nastavení uloženo")}`,
+  );
+}
+
+export async function deletePool(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = str(formData.get("pool_id"));
+
+  // Smaže tipovačku včetně zápasů, otázek, tipů a členství (kaskádově).
+  const { error } = await supabase.from("pools").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  redirect(`/admin?msg=${encodeURIComponent("Tipovačka smazána")}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +166,8 @@ export async function createMatch(formData: FormData) {
   const poolId = str(formData.get("pool_id"));
 
   const startsAt = str(formData.get("starts_at"));
-  const deadline = str(formData.get("predict_deadline"));
+  // Tipování se uzavírá výkopem → deadline = začátek zápasu.
+  const startsIso = startsAt ? new Date(startsAt).toISOString() : null;
 
   const { data: match, error } = await supabase
     .from("matches")
@@ -157,12 +176,8 @@ export async function createMatch(formData: FormData) {
       home_team: str(formData.get("home_team")),
       away_team: str(formData.get("away_team")),
       stage: str(formData.get("stage")) || null,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-      predict_deadline: deadline
-        ? new Date(deadline).toISOString()
-        : startsAt
-          ? new Date(startsAt).toISOString()
-          : null,
+      starts_at: startsIso,
+      predict_deadline: startsIso,
     })
     .select("id")
     .single();
@@ -193,6 +208,9 @@ export async function createMatch(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
+  redirect(
+    `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Zápas přidán")}`,
+  );
 }
 
 export async function deleteMatch(formData: FormData) {
@@ -205,6 +223,9 @@ export async function deleteMatch(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
+  redirect(
+    `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Zápas smazán")}`,
+  );
 }
 
 export async function deleteAllMatches(formData: FormData) {
@@ -220,6 +241,9 @@ export async function deleteAllMatches(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
+  redirect(
+    `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Zápasy smazány")}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +276,9 @@ export async function saveResult(formData: FormData) {
 
   if (!markets) {
     revalidatePath(`/admin/tipovacky/${poolId}`);
-    return;
+    redirect(
+      `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Výsledek uložen")}`,
+    );
   }
 
   // 3) Pro každou otázku odvoď správnou odpověď (kde to jde) a přepočítej tipy.
@@ -290,6 +316,9 @@ export async function saveResult(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
+  redirect(
+    `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Výsledek uložen")}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +380,9 @@ export async function evaluatePlacement(formData: FormData) {
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}/umisteni`);
   revalidatePath(`/tipovacky/${poolId}/zebricek`);
+  redirect(
+    `/admin/tipovacky/${poolId}?msg=${encodeURIComponent("Speciální tipy vyhodnoceny")}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -443,7 +475,7 @@ export async function importMatches(formData: FormData) {
 
   if (rows.length === 0) {
     redirect(
-      `/admin/tipovacky/${poolId}?import_error=${encodeURIComponent("Nenašel jsem žádný platný řádek. Zkontroluj formát.")}`,
+      `/admin/tipovacky/${poolId}?err=${encodeURIComponent("Nenašel jsem žádný platný řádek. Zkontroluj formát.")}`,
     );
   }
 
@@ -453,9 +485,7 @@ export async function importMatches(formData: FormData) {
     .select("id");
 
   if (error) {
-    redirect(
-      `/admin/tipovacky/${poolId}?import_error=${encodeURIComponent(error.message)}`,
-    );
+    redirect(`/admin/tipovacky/${poolId}?err=${encodeURIComponent(error.message)}`);
   }
 
   // Vytvoř tipovací otázky podle šablony tipovačky.
@@ -483,7 +513,10 @@ export async function importMatches(formData: FormData) {
 
   revalidatePath(`/admin/tipovacky/${poolId}`);
   revalidatePath(`/tipovacky/${poolId}`);
-  redirect(
-    `/admin/tipovacky/${poolId}?imported=${inserted?.length ?? 0}&skipped=${skipped}`,
-  );
+  const count = inserted?.length ?? 0;
+  const note =
+    skipped > 0
+      ? `Naimportováno ${count} zápasů (přeskočeno ${skipped})`
+      : `Naimportováno ${count} zápasů`;
+  redirect(`/admin/tipovacky/${poolId}?msg=${encodeURIComponent(note)}`);
 }

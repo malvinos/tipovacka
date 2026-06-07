@@ -24,18 +24,25 @@ export default function LoginPage() {
     setMessage(null);
 
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
-      if (error) setError(error.message);
-      else
+      if (error) {
+        setError(error.message);
+      } else if (data.session) {
+        // Potvrzování e-mailu je vypnuté → uživatel je rovnou přihlášený.
+        router.push("/");
+        router.refresh();
+      } else {
+        // Potvrzování e-mailu je zapnuté → je potřeba potvrdit odkaz v e-mailu.
         setMessage(
           "Hotovo! Zkontroluj e-mail a potvrď registraci kliknutím na odkaz.",
         );
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
         email,

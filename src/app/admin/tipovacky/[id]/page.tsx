@@ -5,6 +5,7 @@ import {
   createMatch,
   deleteAllMatches,
   deleteMatch,
+  deletePool,
   evaluatePlacement,
   importMatches,
   saveResult,
@@ -13,6 +14,7 @@ import {
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ImportArea } from "@/components/ImportArea";
 import { PrivacyFields } from "@/components/PrivacyFields";
+import { DeletePoolForm } from "@/components/DeletePoolForm";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +38,10 @@ function formatDate(value: string | null) {
 
 export default async function ManagePoolPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{
-    imported?: string;
-    skipped?: string;
-    import_error?: string;
-  }>;
 }) {
   const { id } = await params;
-  const sp = await searchParams;
   const supabase = await createClient();
 
   const { data: pool } = await supabase
@@ -120,22 +115,6 @@ export default async function ManagePoolPage({
           </Link>
         </div>
       </div>
-
-      {/* Hlášky o importu */}
-      {sp.imported && (
-        <div className="card p-4 text-sm badge-success border">
-          Naimportováno {sp.imported} zápasů
-          {sp.skipped && Number(sp.skipped) > 0
-            ? ` (přeskočeno ${sp.skipped} neplatných řádků)`
-            : ""}
-          .
-        </div>
-      )}
-      {sp.import_error && (
-        <div className="card p-4 text-sm badge-warning border">
-          Import se nezdařil: {sp.import_error}
-        </div>
-      )}
 
       {/* Úprava tipovačky */}
       <section>
@@ -400,16 +379,9 @@ export default async function ManagePoolPage({
                 required
                 className="input"
               />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">
-                Uzávěrka tipů <span className="text-muted">(nepovinné)</span>
+              <span className="text-xs text-muted">
+                Tipování se uzavře v čase výkopu.
               </span>
-              <input
-                name="predict_deadline"
-                type="datetime-local"
-                className="input"
-              />
             </label>
           </div>
           <div className="flex justify-end">
@@ -524,6 +496,21 @@ export default async function ManagePoolPage({
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Nebezpečná zóna */}
+      <section>
+        <h3 className="font-semibold mb-4 text-red-600">Smazat tipovačku</h3>
+        <div className="rounded-lg border border-red-300 p-5 flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            Nevratně smaže tipovačku včetně všech zápasů, tipů a členů.
+          </p>
+          <DeletePoolForm
+            poolId={pool.id}
+            poolName={pool.name}
+            action={deletePool}
+          />
         </div>
       </section>
     </div>
