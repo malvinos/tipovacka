@@ -30,7 +30,7 @@ export function HomeTabs({ groups }: { groups: Group[] }) {
     <div>
       {/* Přepínač kategorií – segment na střed */}
       <div className="flex justify-center mb-8">
-        <div className="inline-flex gap-1 p-1 rounded-full border bg-surface">
+        <div className="inline-flex flex-wrap justify-center gap-1 p-1 rounded-full border bg-surface max-w-full">
           {groups.map((g, i) => (
             <button
               key={g.key}

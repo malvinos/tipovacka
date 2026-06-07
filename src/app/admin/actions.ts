@@ -18,15 +18,24 @@ function str(v: FormDataEntryValue | null): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** Načte číselné pole; prázdné → default, ale 0 zůstane 0. */
+function numField(formData: FormData, name: string, def: number) {
+  const v = str(formData.get(name));
+  if (v === "") return def;
+  const n = Number(v);
+  return Number.isNaN(n) ? def : n;
+}
+
 /** Sestaví šablonu otázek (bodování) z formuláře. */
 function buildMarkets(formData: FormData) {
-  const exact = Number(str(formData.get("points_exact"))) || 3;
-  const outcome = Number(str(formData.get("points_outcome"))) || 1;
+  const exact = numField(formData, "points_exact", 15);
+  const outcome = numField(formData, "points_outcome", 7);
+  const goals = numField(formData, "points_goals", 3);
   return [
     {
       type: "EXACT_SCORE",
       label: "Výsledek zápasu",
-      points_config: { exact, outcome },
+      points_config: { exact, outcome, goals },
     },
   ];
 }
@@ -54,6 +63,11 @@ export async function createPool(formData: FormData) {
       event_start: str(formData.get("event_start")) || null,
       event_end: str(formData.get("event_end")) || null,
       default_markets: buildMarkets(formData),
+      placement_points: { "1": 15, "2": 15, "3": 15 },
+      extras: {
+        scorer: { enabled: false, points: 15, correct: "" },
+        assists: { enabled: false, points: 15, correct: "" },
+      },
       created_by: user.id,
     })
     .select("id")

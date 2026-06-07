@@ -204,6 +204,24 @@ body {
   border-color: var(--warning);
 }
 
+/* Barevné rámečky v pravidlech */
+.callout-info {
+  background: color-mix(in srgb, var(--info) 8%, var(--surface));
+  border-left-color: var(--info);
+}
+.callout-success {
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  border-left-color: var(--success);
+}
+.callout-warn {
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  border-left-color: var(--warning);
+}
+.callout-box {
+  background: color-mix(in srgb, var(--foreground) 4%, var(--surface));
+  border-left-color: var(--border);
+}
+
 /* Zvýrazněná karta s pravidly */
 .rules-box {
   background: color-mix(in srgb, var(--primary) 7%, var(--surface));

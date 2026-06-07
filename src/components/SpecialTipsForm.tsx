@@ -95,8 +95,8 @@ function PlacementSelect({
   }
 
   return (
-    <label className="flex items-center gap-3">
-      <span className="w-40 text-sm shrink-0">
+    <label className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+      <span className="text-sm sm:w-44 shrink-0">
         {position.medal} {position.label}{" "}
         {position.points ? (
           <span className="text-xs text-muted font-normal">
@@ -153,8 +153,8 @@ function ExtraInput({
   }
 
   return (
-    <label className="flex items-center gap-3">
-      <span className="w-48 text-sm shrink-0">
+    <label className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+      <span className="text-sm sm:w-48 shrink-0">
         {extra.icon} {extra.label}{" "}
         {extra.points ? (
           <span className="text-xs text-muted font-normal">

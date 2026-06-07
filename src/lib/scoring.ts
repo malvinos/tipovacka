@@ -50,8 +50,10 @@ export function scorePrediction(
 
   switch (type) {
     case "EXACT_SCORE": {
+      // Počítá se nejvýhodnější varianta: přesný výsledek > vítěz > počet branek.
       const exactPts = num(config.exact, 3);
       const outcomePts = num(config.outcome, 1);
+      const goalsPts = num(config.goals, 0);
       const vh = num(value.home, NaN);
       const va = num(value.away, NaN);
       const ch = num(correct.home, NaN);
@@ -60,6 +62,7 @@ export function scorePrediction(
       if (vh === ch && va === ca) return exactPts;
       if (outcomeFromScore(vh, va) === outcomeFromScore(ch, ca))
         return outcomePts;
+      if (vh + va === ch + ca) return goalsPts;
       return 0;
     }
     case "OUTCOME_1X2": {

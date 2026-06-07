@@ -5,6 +5,7 @@ import { TeamBadge } from "@/components/TeamBadge";
 import { PredictionForm } from "@/components/PredictionForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Countdown } from "@/components/Countdown";
+import { RulesView } from "@/components/RulesView";
 
 export const dynamic = "force-dynamic";
 
@@ -192,7 +193,9 @@ export default async function PoolMatchesPage({
             <RulesIcon />
             Pravidla tipování
           </summary>
-          <div className="text-sm whitespace-pre-line mt-3">{pool.rules}</div>
+          <div className="mt-3">
+            <RulesView text={pool.rules} />
+          </div>
         </details>
       )}
 

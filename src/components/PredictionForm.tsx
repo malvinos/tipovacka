@@ -126,7 +126,7 @@ export function PredictionForm({
             setOutcome(e.target.value);
             saveNow(buildValue(home, away, e.target.value));
           }}
-          className="input w-52"
+          className="input w-full sm:w-52"
         >
           <option value="">Vyber…</option>
           <option value="1">Výhra domácích</option>
@@ -144,7 +144,7 @@ export function PredictionForm({
           }}
           onBlur={() => saveNow(buildValue())}
           placeholder="Jméno hráče"
-          className="input w-52"
+          className="input w-full sm:w-52"
         />
       )}
     </div>

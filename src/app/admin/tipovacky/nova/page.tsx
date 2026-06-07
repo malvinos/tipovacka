@@ -64,28 +64,42 @@ export default function NewPoolPage() {
 
         <div className="rounded-lg border p-4 flex flex-col gap-3">
           <p className="text-sm font-medium">Bodování zápasů</p>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm">Body za přesný výsledek</span>
+              <span className="text-sm">Přesný výsledek</span>
               <input
                 name="points_exact"
+                type="number"
+                min={0}
+                className="input"
+                defaultValue={15}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm">Správný vítěz / remíza</span>
+              <input
+                name="points_outcome"
+                type="number"
+                min={0}
+                className="input"
+                defaultValue={7}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm">Počet branek (součet)</span>
+              <input
+                name="points_goals"
                 type="number"
                 min={0}
                 className="input"
                 defaultValue={3}
               />
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm">Body za správného vítěze / remízu</span>
-              <input
-                name="points_outcome"
-                type="number"
-                min={0}
-                className="input"
-                defaultValue={1}
-              />
-            </label>
           </div>
+          <p className="text-muted text-xs">
+            Počítá se nejvýhodnější varianta (přesný výsledek &gt; vítěz &gt;
+            počet branek).
+          </p>
         </div>
 
         <PrivacyFields />

@@ -15,6 +15,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { ImportArea } from "@/components/ImportArea";
 import { PrivacyFields } from "@/components/PrivacyFields";
 import { DeletePoolForm } from "@/components/DeletePoolForm";
+import { RulesField } from "@/components/RulesField";
 
 export const dynamic = "force-dynamic";
 
@@ -95,8 +96,12 @@ export default async function ManagePoolPage({
   const exactMarket = dm.find(
     (m: { type?: string }) => m.type === "EXACT_SCORE",
   ) as { points_config?: { exact?: number; outcome?: number } } | undefined;
-  const pointsExact = exactMarket?.points_config?.exact ?? 3;
-  const pointsOutcome = exactMarket?.points_config?.outcome ?? 1;
+  const pc = exactMarket?.points_config as
+    | { exact?: number; outcome?: number; goals?: number }
+    | undefined;
+  const pointsExact = pc?.exact ?? 15;
+  const pointsOutcome = pc?.outcome ?? 7;
+  const pointsGoals = pc?.goals ?? 3;
 
   return (
     <div className="flex flex-col gap-10">
@@ -163,15 +168,7 @@ export default async function ManagePoolPage({
             )}
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Pravidla tipování</span>
-            <textarea
-              name="rules"
-              rows={4}
-              className="input"
-              defaultValue={pool.rules ?? ""}
-            />
-          </label>
+          <RulesField initial={pool.rules ?? ""} poolName={pool.name} />
 
           <div className="grid sm:grid-cols-3 gap-4">
             <label className="flex flex-col gap-1.5">
@@ -251,7 +248,7 @@ export default async function ManagePoolPage({
                     type="number"
                     min={0}
                     className="input"
-                    defaultValue={placementPoints[String(pos)] ?? ""}
+                    defaultValue={placementPoints[String(pos)] ?? 15}
                   />
                 </label>
               </div>
@@ -286,7 +283,7 @@ export default async function ManagePoolPage({
                       min={0}
                       className="input"
                       placeholder="Body"
-                      defaultValue={cfg.points ?? ""}
+                      defaultValue={cfg.points ?? 15}
                     />
                   </div>
                 </div>
@@ -297,9 +294,9 @@ export default async function ManagePoolPage({
           {/* Bodování zápasů */}
           <div className="rounded-lg border p-4 flex flex-col gap-3">
             <p className="text-sm font-medium">Bodování zápasů</p>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-3 gap-4">
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm">Body za přesný výsledek</span>
+                <span className="text-sm">Přesný výsledek</span>
                 <input
                   name="points_exact"
                   type="number"
@@ -309,9 +306,7 @@ export default async function ManagePoolPage({
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm">
-                  Body za správného vítěze / remízu
-                </span>
+                <span className="text-sm">Správný vítěz / remíza</span>
                 <input
                   name="points_outcome"
                   type="number"
@@ -320,10 +315,21 @@ export default async function ManagePoolPage({
                   defaultValue={pointsOutcome}
                 />
               </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm">Počet branek (součet)</span>
+                <input
+                  name="points_goals"
+                  type="number"
+                  min={0}
+                  className="input"
+                  defaultValue={pointsGoals}
+                />
+              </label>
             </div>
             <p className="text-muted text-xs">
-              Platí pro nové i už založené zápasy. U dohraných zápasů přepočítej
-              body znovu uložením výsledku.
+              Počítá se nejvýhodnější varianta (přesný výsledek &gt; vítěz &gt;
+              počet branek). Platí pro nové i už založené zápasy; u dohraných
+              přepočítej body znovu uložením výsledku.
             </p>
           </div>
 
@@ -334,17 +340,31 @@ export default async function ManagePoolPage({
           </div>
         </form>
 
-        {(pool.placement_enabled ||
-          extras.scorer?.enabled ||
-          extras.assists?.enabled) && (
-          <form action={evaluatePlacement} className="mt-3 flex justify-end">
-            <input type="hidden" name="pool_id" value={pool.id} />
-            <button type="submit" className="btn btn-outline">
-              Vyhodnotit speciální tipy
-            </button>
-          </form>
-        )}
       </section>
+
+      {/* Vyhodnocení speciálních tipů */}
+      {(pool.placement_enabled ||
+        extras.scorer?.enabled ||
+        extras.assists?.enabled) && (
+        <section>
+          <h3 className="font-semibold mb-4">Vyhodnocení speciálních tipů</h3>
+          <div className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              Spusť až po skončení turnaje, když máš vyplněné správné pořadí a
+              hráče. Přepočítá body za speciální tipy do žebříčku.
+            </p>
+            <form action={evaluatePlacement}>
+              <input type="hidden" name="pool_id" value={pool.id} />
+              <ConfirmButton
+                confirmText="Vyhodnotit speciální tipy a přepočítat body? Spouštěj až po vyplnění správných odpovědí."
+                className="btn btn-outline shrink-0"
+              >
+                Vyhodnotit speciální tipy
+              </ConfirmButton>
+            </form>
+          </div>
+        </section>
+      )}
 
       {/* Přidání zápasu */}
       <section>
@@ -422,6 +442,7 @@ export default async function ManagePoolPage({
               <input type="hidden" name="pool_id" value={pool.id} />
               <ConfirmButton
                 confirmText={`Opravdu smazat všech ${matches.length} zápasů včetně tipů? Tuto akci nelze vrátit.`}
+                className="btn btn-danger-ghost"
               >
                 Smazat všechny
               </ConfirmButton>
@@ -489,6 +510,7 @@ export default async function ManagePoolPage({
                   <input type="hidden" name="pool_id" value={pool.id} />
                   <ConfirmButton
                     confirmText={`Smazat zápas ${m.home_team} vs ${m.away_team}?`}
+                    className="btn btn-danger-ghost"
                   >
                     Smazat
                   </ConfirmButton>

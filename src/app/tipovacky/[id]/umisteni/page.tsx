@@ -204,7 +204,7 @@ function ValueRow({
 }) {
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="w-40 text-muted">{label}</span>
+      <span className="w-28 sm:w-40 shrink-0 text-muted">{label}</span>
       {value ? (
         <span className="flex items-center gap-2 font-medium">
           {team && <TeamBadge name={value} size={22} />}
