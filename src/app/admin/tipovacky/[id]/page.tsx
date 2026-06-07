@@ -168,7 +168,7 @@ export default async function ManagePoolPage({
             )}
           </label>
 
-          <RulesField initial={pool.rules ?? ""} poolName={pool.name} />
+          <RulesField initial={pool.rules ?? ""} />
 
           <div className="grid sm:grid-cols-3 gap-4">
             <label className="flex flex-col gap-1.5">

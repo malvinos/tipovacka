@@ -7,13 +7,7 @@ import { useRef, useState } from "react";
  * nastavení formuláře (bodování + zapnuté speciální tipy) včetně příkladů a
  * upozornění na speciální tipy.
  */
-export function RulesField({
-  initial,
-  poolName,
-}: {
-  initial: string;
-  poolName: string;
-}) {
+export function RulesField({ initial }: { initial: string }) {
   const [value, setValue] = useState(initial);
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -32,8 +26,6 @@ export function RulesField({
     const goals = val("points_goals", "3");
 
     const lines: string[] = [
-      `# 🏆 Pravidla tipování — ${poolName}`,
-      "",
       ":::info",
       "**Bodování zápasů** (počítá se nejvýhodnější varianta):",
       `- **Přesný výsledek:** ${exact} b.`,

@@ -188,7 +188,7 @@ export default async function PoolMatchesPage({
       )}
 
       {pool.rules?.trim() && (
-        <details className="rules-box p-5 mb-6" open>
+        <details className="card p-5 mb-6" open>
           <summary className="font-semibold cursor-pointer flex items-center gap-2">
             <RulesIcon />
             Pravidla tipování
