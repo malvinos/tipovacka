@@ -57,10 +57,10 @@ export default async function PoolMatchesPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ join_error?: string }>;
+  searchParams: Promise<{ join_error?: string; filter?: string }>;
 }) {
   const { id } = await params;
-  const { join_error } = await searchParams;
+  const { join_error, filter } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -229,30 +229,98 @@ export default async function PoolMatchesPage({
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
-        {withDaySeparators((matches as Match[]) ?? []).map((entry, i) =>
-          entry.kind === "day" ? (
-            <div
-              key={`day-${entry.key}`}
-              className="flex items-center gap-3 text-xs font-semibold text-muted first:mt-0 mt-3"
-            >
-              <span className="h-px flex-1 bg-border" />
-              {entry.label}
-              <span className="h-px flex-1 bg-border" />
+      {(() => {
+        const all = (matches as Match[] | null) ?? [];
+        if (all.length === 0) return null;
+
+        const finishedCount = all.filter(
+          (m) => m.status === "finished",
+        ).length;
+        const activeCount = all.length - finishedCount;
+        const mode =
+          filter === "dohrane"
+            ? "dohrane"
+            : filter === "vse"
+              ? "vse"
+              : "aktualni";
+        const visible =
+          mode === "dohrane"
+            ? all.filter((m) => m.status === "finished")
+            : mode === "vse"
+              ? all
+              : all.filter((m) => m.status !== "finished");
+
+        const base = `/tipovacky/${pool.id}`;
+        const filters = [
+          { key: "aktualni", label: "Aktuální", count: activeCount, href: base },
+          {
+            key: "dohrane",
+            label: "Dohrané",
+            count: finishedCount,
+            href: `${base}?filter=dohrane`,
+          },
+          {
+            key: "vse",
+            label: "Vše",
+            count: all.length,
+            href: `${base}?filter=vse`,
+          },
+        ];
+
+        return (
+          <>
+            {finishedCount > 0 && (
+              <div className="inline-flex flex-wrap gap-1 p-1 rounded-xl border bg-background mb-5">
+                {filters.map((f) => (
+                  <Link
+                    key={f.key}
+                    href={f.href}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      mode === f.key
+                        ? "bg-surface text-foreground shadow-sm"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {f.label}{" "}
+                    <span className="opacity-60">{f.count}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4">
+              {visible.length === 0 ? (
+                <div className="card p-6 text-sm text-muted">
+                  V této kategorii nejsou žádné zápasy.
+                </div>
+              ) : (
+                withDaySeparators(visible).map((entry, i) =>
+                  entry.kind === "day" ? (
+                    <div
+                      key={`day-${entry.key}`}
+                      className="flex items-center gap-3 text-xs font-semibold text-muted first:mt-0 mt-3"
+                    >
+                      <span className="h-px flex-1 bg-border" />
+                      {entry.label}
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                  ) : (
+                    <MatchCard
+                      key={entry.match.id}
+                      m={entry.match}
+                      isMember={isMember}
+                      poolId={pool.id}
+                      predictionByMarket={predictionByMarket}
+                      stat={statsByMatch.get(entry.match.id)}
+                      animIndex={i}
+                    />
+                  ),
+                )
+              )}
             </div>
-          ) : (
-            <MatchCard
-              key={entry.match.id}
-              m={entry.match}
-              isMember={isMember}
-              poolId={pool.id}
-              predictionByMarket={predictionByMarket}
-              stat={statsByMatch.get(entry.match.id)}
-              animIndex={i}
-            />
-          ),
-        )}
-      </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
