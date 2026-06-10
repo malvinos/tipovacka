@@ -6,6 +6,7 @@ import { PredictionForm } from "@/components/PredictionForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Countdown } from "@/components/Countdown";
 import { RulesView } from "@/components/RulesView";
+import { OutcomeBar } from "@/components/OutcomeBar";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,29 @@ export default async function PoolMatchesPage({
     )
     .eq("pool_id", id)
     .order("starts_at", { ascending: true });
+
+  // Souhrnná statistika tipů (1/X/2) podle zápasu
+  type OutcomeStat = {
+    total: number;
+    home_wins: number;
+    draws: number;
+    away_wins: number;
+  };
+  const statsByMatch = new Map<string, OutcomeStat>();
+  const matchIds = (matches ?? []).map((m) => m.id);
+  if (matchIds.length > 0) {
+    const { data: stats } = await supabase
+      .from("match_outcome_stats")
+      .select("match_id, total, home_wins, draws, away_wins")
+      .in("match_id", matchIds);
+    for (const s of stats ?? [])
+      statsByMatch.set(s.match_id, {
+        total: s.total,
+        home_wins: s.home_wins,
+        draws: s.draws,
+        away_wins: s.away_wins,
+      });
+  }
 
   // Tipy přihlášeného uživatele (mapováno podle market_id)
   const predictionByMarket = new Map<
@@ -223,6 +247,7 @@ export default async function PoolMatchesPage({
               isMember={isMember}
               poolId={pool.id}
               predictionByMarket={predictionByMarket}
+              stat={statsByMatch.get(entry.match.id)}
               animIndex={i}
             />
           ),
@@ -278,12 +303,14 @@ function MatchCard({
   isMember,
   poolId,
   predictionByMarket,
+  stat,
   animIndex,
 }: {
   m: Match;
   isMember: boolean;
   poolId: string;
   predictionByMarket: PredictionMap;
+  stat?: { total: number; home_wins: number; draws: number; away_wins: number };
   animIndex: number;
 }) {
   const deadlinePassed = m.predict_deadline
@@ -355,6 +382,14 @@ function MatchCard({
         <p className="text-sm text-muted">
           Připoj se k tipovačce, abys mohl tipovat.
         </p>
+      )}
+
+      {stat && stat.total > 0 && (
+        <OutcomeBar
+          home={stat.home_wins}
+          draw={stat.draws}
+          away={stat.away_wins}
+        />
       )}
     </div>
   );
